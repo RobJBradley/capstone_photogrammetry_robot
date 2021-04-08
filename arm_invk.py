@@ -12,9 +12,9 @@ from kahan_p2 import kahan_p2
 # outputs: Numpy array of the vertical displacement (mm), head extension (mm),
 #          and the pan/tilt angles (rad)
 #
-# home position and bounds: vertical_disp   = 0 = head at the bottom of the arm    bound [0,MAX_ARM_HEIGHT]
-#                           head_extension  = 0 = head closest to arm              bound [0,MAX_HEAD_EXT]
-#                           pan             = 0 = camera facing left (portside)    bound [-pi, pi] -> (front, back)
+# home position and bounds: vertical_disp   = 0 = head at the bottom of the arm    bound [0,MAX_ARM_HEIGHT](bottom, top)
+#                           head_extension  = 0 = head closest to arm              bound [0,MAX_HEAD_EXT] (in, out)
+#                           pan             = 0 = camera facing left (portside)    bound [-pi/2, pi/2] -> (front, back)
 #                           tilt            = 0 = camera straight down             bound [0, pi] -> (down, up)
 #  ###############################################################################################################
 def arm_invk(o_body, frame_body, o_head, frame_head):
@@ -53,10 +53,10 @@ def arm_invk(o_body, frame_body, o_head, frame_head):
         [[theta1, phi1], [theta2, phi2]] = kahan_p3(k_head, k_body, i_head, i_body)
 
         # screen the correct phi (change based on positive/ negative tilt angles)
-        if abs(phi1) > abs(phi2):
-            pan = (phi1 + math.pi) % (2 * math.pi)
-        else:
+        if abs(phi1) < abs(phi2):
             pan = (phi2 + math.pi) % (2 * math.pi)
+        else:
+            pan = (phi1 + math.pi) % (2 * math.pi)
 
         # bound between [-pi, pi]
         if pan >= math.pi:

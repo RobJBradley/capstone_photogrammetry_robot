@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # print([test[0] * multiplier[0], test[1] * multiplier[1], test[2] * multiplier[2], test[3] * multiplier[3]])
 
     # print("kinematics test:")
-    # seek_var = [1.0, 0.35, -73. * math.pi/180, 5. * math.pi/180]
+    # seek_var = [1.0, 0.35, -73. * math.pi/180, 80. * math.pi/180]
     # [trans04, temp] = arm_fwdk(seek_var)  # [1.42, .25, math.pi * 5 / 16, math.pi * 3 / 4]
     # xyz = trans04 @ np.array([[0], [0], [0], [1]])
     # zero = np.zeros((3, 1))

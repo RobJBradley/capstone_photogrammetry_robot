@@ -14,9 +14,9 @@ def arm_fwdk(joint_vars):
 
     # calculate the frame transformation matrices
     trans_0to1 = dh_homog(0., constant.ARM_HEIGHT_DISPLACEMENT + joint_vars[0], 0., -math.pi / 2)
-    trans_1to2 = dh_homog(0., constant.SCISSOR_DISPLACEMENT + joint_vars[1], 0., math.pi / 2)
-    trans_2to3 = dh_homog(joint_vars[2] + math.pi / 2, 0., 0., math.pi / 2)
-    trans_3to4 = dh_homog(joint_vars[3] - math.pi/2, 0., 0., -math.pi / 2)
+    trans_1to2 = dh_homog(0., constant.SCISSOR_DISPLACEMENT + joint_vars[1],    0., math.pi / 2)
+    trans_2to3 = dh_homog(joint_vars[2] + math.pi / 2,          0.,             0., math.pi / 2)
+    trans_3to4 = dh_homog(joint_vars[3] - math.pi/2,            0.,             0., -math.pi / 2)
 
     # total Transformation Matrix
     trans_0to4 = trans_0to1 @ trans_1to2 @ trans_2to3 @ trans_3to4

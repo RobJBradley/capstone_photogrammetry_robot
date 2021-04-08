@@ -23,27 +23,28 @@ import constant
 def manipulator_seek(od_body, cd_body, od_head, cd_head):
 
     # initialize errors
-    # prev_error = np.array([0., 0., 0., 0.])
-    # sum_error = np.array([0., 0., 0., 0.])
-    # motor_values = np.array([0., 0., 0., 0.])
     prev_error = np.zeros((1, 4))
     sum_error = np.zeros((1, 4))
     motor_values = np.zeros((1, 4))
 
+    # setup graphing parameters
     fig, axs = plt.subplots(2, 2)
     time = [i for i in range(constant.PID_STEP_LIMIT)]
     error_graph = np.zeros((4, constant.PID_STEP_LIMIT))
+
+    # initialize iteration counters (stability checking indexes)
     counter = 0
     not_in_place = 0
 
-    # this is initialization for TESTING ONLY
+    # this is initialization for TESTING ONLY #########################################################
+    # initial arm position FOR TESTING
     q_current = np.array([[.8], [.35], [1.2], [.7]])
 
     # find target joint parameters
     q_target = arm_invk(od_body, cd_body, od_head, cd_head)
 
-    print("Begin Seeking Loop to:", q_target.T)
-    # Loop until error is within threshold
+    print("Begin Manipulator Seeking Loop to:", q_target.T)
+    # Loop until error is within the threshold
     while True:
         # get current positions and orientations from udp packet
         if constant.using_webots:
@@ -57,7 +58,7 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
         # calculate adjustments based on PID
         [motor_values_adjust, prev_error, sum_error] = manipulator_pid(q_current, q_target, prev_error, sum_error)
 
-        # add adjustment to the previous motor values
+        # add adjustment to the previous motor PWM values
         motor_values = np.add(motor_values, motor_values_adjust)
 
         # limit motor PWM values to the range [-1,1]
@@ -71,28 +72,29 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
         else:
             send_to_robot(motor_values)
 
-        if constant.plotPID:
-            error_graph[:, counter] = prev_error[:]
-
-        # current number of steps (used to index previous errors to determine stability)
-        counter = counter + 1
+        # record the error to check for stability of the system
+        error_graph[:, counter] = prev_error[:]
 
         # if any joint is not within acceptable threshold reset stability check
         for k in range(len(q_current)):
             # first 2 errors are joint displacements (setting using_head_ext=0 does not include it in the error)
-            if (k <= constant.using_head_ext) and (abs(error_graph[k, counter-1]) > constant.position_threshold):
+            if (k <= constant.using_head_ext) and (abs(error_graph[k, counter]) > constant.position_threshold):
                 not_in_place = 0
             # second 2 errors are angle displacements
-            elif (k >= 2) and (abs(error_graph[k, counter-1]) > constant.angle_threshold):
+            elif (k >= 2) and (abs(error_graph[k, counter]) > constant.angle_threshold):
                 not_in_place = 0
             else:
                 not_in_place += 1
 
-        # if robot has been within the thresholds for "consecutive_manipulator_successes" time steps -> success!
+        # increment the current number of steps (used to index previous errors to determine stability)
+        counter += 1
+
+        # if robot has been within the thresholds for a specified amount of time steps -> stability achieved!
         if not_in_place > constant.consecutive_manipulator_successes:
-            print("final joint error is:\n", prev_error)
-            # if plotting the search is enabled: plot each joint error
+            print("Manipulator Seek Success")
+            # if plotting the seek operation is enabled: plot each joint error
             if constant.plotPID:
+                print("final joint error is:\n", prev_error)
                 axs[0, 0].set_title('Arm Displacement')
                 axs[0, 0].plot(time[0:counter], error_graph[0, 0:counter])
                 axs[0, 1].set_title('Head Extension')
@@ -109,20 +111,24 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
                 print("difference in frame:\n", np.subtract(cd_head, trans04[0:3, 0:3]))
             break
 
+        # timeout failsafe -> if a PID_STEP_LIMIT is reached something is likely wrong
+        # (unstable request or impossible geometry)
         if counter >= constant.PID_STEP_LIMIT:
-            print("ERROR: TOO MANY TIME STEPS")
-            axs[0, 0].set_title('Arm Displacement')
-            axs[0, 0].plot(time[:], error_graph[0, :])
-            axs[0, 1].set_title('Head Extension')
-            axs[0, 1].plot(time[:], error_graph[1, :])
-            axs[1, 0].set_title('Pan Angle')
-            axs[1, 0].plot(time[:], error_graph[2, :])
-            axs[1, 1].set_title('Tilt Angle')
-            axs[1, 1].plot(time[:], error_graph[3, :])
-            plt.subplots_adjust(hspace=.32, wspace=.3)
-            plt.show()
-            break
-    return
+            print("MANIPULATOR SEEK ERROR: TOO MANY TIME STEPS")
+            if constant.plotPID:
+                print("ERROR: TOO MANY TIME STEPS")
+                axs[0, 0].set_title('Arm Displacement')
+                axs[0, 0].plot(time[:], error_graph[0, :])
+                axs[0, 1].set_title('Head Extension')
+                axs[0, 1].plot(time[:], error_graph[1, :])
+                axs[1, 0].set_title('Pan Angle')
+                axs[1, 0].plot(time[:], error_graph[2, :])
+                axs[1, 1].set_title('Tilt Angle')
+                axs[1, 1].plot(time[:], error_graph[3, :])
+                plt.subplots_adjust(hspace=.32, wspace=.3)
+                plt.show()
+            return False
+    return True
 
 
 #  ###############################################################################################################
@@ -167,9 +173,13 @@ def manipulator_pid(q_current, q_target, prev_error, sum_error):
 #       frame: quaternion
 #   }
 #  ###############################################################################################################
-# Function that 
-#
-#
+# Function that waits for data from the Vive tracker, receives a json packet, and converts it into Numpy arrays
+# input: none
+# output:
+#           np array of the origin of the body (3x1)
+#           np array of the frame of the body (3x3)         i = forward along robot body, k = upwards in space
+#           np array of the origin of the head (3x1)
+#           np array of the frame of the head (3x3)         i = forward along camera, k = upwards of camera
 #  ###############################################################################################################
 def get_robot_data():
 
@@ -180,11 +190,18 @@ def get_robot_data():
     # convert quaternion to rotation matrix
 
     # assign current origin (o)/frame (c) data for body/head
-    [oc_body, cc_body, oc_head, cc_head] = [np.zeros(3, 1), np.eye(3), np.zeros(3, 1), np.eye(3)]
+    [oc_body, cc_body, oc_head, cc_head] = [np.zeros((3, 1)), np.eye(3), np.zeros((3, 1)), np.eye(3)]
 
     return [oc_body, cc_body, oc_head, cc_head]
 
 
+#  ###############################################################################################################
+# Function that sends the manipulator PWM values to the microcontroller
+# input:
+#           np array of the motor values (1x4)  [arm_displacement_PWM, head_displacement_PWM, pan_PWM, tilt_PWM]
+#                                               ranging from [0,1]
+# result: the microcontroller is sent the PWM value of each joint motor for the manipulator
+#  ###############################################################################################################
 def send_to_robot(motor_values):
 
     # send motor values to the MCU
@@ -192,10 +209,12 @@ def send_to_robot(motor_values):
     return
 
 
-# function to receive webots data and convert it to the same data from the real system
+#  ###############################################################################################################
+# Function to receive webots data and convert it to the same data from the real system
 # input: none
-# output: returns the origin and frame of the body, and the origin and frame of the head
-#                       [oc_body, cc_body,                  oc_head, cc_head]
+# output: the origin and frame of the body, and the origin and frame of the head
+#             [oc_body, cc_body,                    oc_head, cc_head]
+#  ###############################################################################################################
 def get_webots_data(motor_values, joint_vars):
     test_speed_val = 1000
     # get joint data [arm_displacement, head_displacement, pan, tilt]
@@ -218,8 +237,13 @@ def get_webots_data(motor_values, joint_vars):
     return [oc_body, cc_body, oc_head, cc_head]
 
 
-# input: PWM values for each joint motor [arm_displacement_PWM, head_displacement_PWM, pan_PWM, tilt_PWM]
+#  ###############################################################################################################
+# Function that sends the manipulator PWM values to the webots simulation motors
+# input:
+#           np array of the motor values (1x4)  [arm_displacement_PWM, head_displacement_PWM, pan_PWM, tilt_PWM]
+#                                               ranging from [0,1]
 # result: sends the data to the webots simulation motors
+#  ###############################################################################################################
 def send_to_webots(motor_values):
 
     # send motor values to the MCU

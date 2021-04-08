@@ -1,3 +1,6 @@
+
+
+# unfinished and untested implementation due to time restraints
 # calculates the required joint variable positions, velocities and accelerations to move
 # the arm along a straight line trajectory
 import numpy as np

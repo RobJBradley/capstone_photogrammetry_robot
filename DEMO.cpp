@@ -86,10 +86,11 @@ int main(int argc, char **argv) {
   
   max_right_speed = MAX_SPEED; 
  
-  drive_ratio = ((1+(bot_width/(2*radius)))/(1-(bot_width/(2*radius))));
+  drive_ratio = ((1+(bot_width/(2*radius)))/(1-(bot_width/(2*radius)))); //Robot's route radius is doble the raidius of the object to scan 
   
   max_left_speed = max_right_speed/drive_ratio; 
   
+  ///WEBOTS LOOP STARTS
   while (robot->step(TIME_STEP) != -1) {
     int key=kb.getKey();
     
@@ -104,15 +105,15 @@ int main(int argc, char **argv) {
     turn_off = 0;
     }
     
-    
+    ////SCAN PROCESS
     if (scan_flag == 1){
         if(leftSpeed > 0.0 && rightSpeed > 0.0){
-            
+           /// Wheels speed is decreased gradually so as to avoid a sudden stop
            leftSpeed += -max_left_speed/20;
            rightSpeed += -max_right_speed/20;
         
         } else{
-        
+           
              if(linear < 0.25 ){
               linear += 0.01;
               
@@ -205,15 +206,13 @@ int main(int argc, char **argv) {
     turn_off = 1;
     rotate = 0.55;     
     rotateq = 0.0;
-    extension = 0.0;
-                 
+    extension = 0.0;              
       if(leftSpeed > 0.0 && rightSpeed > 0.0){           
            leftSpeed += -max_left_speed/20;
            rightSpeed += -max_right_speed/20;  
       } else if(linear > 0.01 ){
               linear += -0.01;   
         }
-        
     }
    
     

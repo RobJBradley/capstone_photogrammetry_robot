@@ -7,8 +7,8 @@ import numpy as np
 from viscid.rotation import rot2axang
 import constant
 import math
-from arm_invk import arm_invk
-from arm_fwdk import arm_fwdk
+from manipulator_invk import manipulator_invk
+from manipulator_fwdk import manipulator_fwdk
 import matplotlib.pyplot as plt
 
 
@@ -46,8 +46,8 @@ def arm_trajectory(od_body, cd_body, oc_body, cc_body, od_head, cd_head, oc_head
 
     # calc first origin change and jacobian from current input
     oi[:, 0] = (oc + direction * di).T
-    q0 = arm_invk(oc_body, cc_body, oc_head, cc_head)
-    [temp, jac[:, 0:4]] = arm_fwdk([q0[0, 0], q0[1, 0], q0[2, 0], q0[3, 0]])
+    q0 = manipulator_invk(oc_body, cc_body, oc_head, cc_head)
+    [temp, jac[:, 0:4]] = manipulator_fwdk([q0[0, 0], q0[1, 0], q0[2, 0], q0[3, 0]])
 
     # q(desired) = q(current) + Jinv * xdot
     # [[od-oc], [theta*axis]] = xdot
@@ -67,7 +67,7 @@ def arm_trajectory(od_body, cd_body, oc_body, cc_body, od_head, cd_head, oc_head
         oi[:, n] = (oc + direction * di).T
 
         # calc Jacobian + pseudo inverse
-        [temp, jac[:, n*4: (n+1)*4]] = arm_fwdk(q[:, n-1])
+        [temp, jac[:, n*4: (n+1)*4]] = manipulator_fwdk(q[:, n-1])
         jinv = np.linalg.pinv(jac[:, n*4: (n+1)*4])
 
         # q(desired) = q(current) + Jinv * [[od-oc], [theta*axis]]
@@ -110,7 +110,7 @@ def arm_trajectory(od_body, cd_body, oc_body, cc_body, od_head, cd_head, oc_head
         oi[:, n] = (oi[:, constant.TRAJECTORY_TIME_STEPS // 2 - 1].reshape(3, 1) + direction * di).T
 
         # calc Jacobian + pseudo inverse
-        [temp, jac[:, n * 4: (n + 1) * 4]] = arm_fwdk(q[:, n - 1])
+        [temp, jac[:, n * 4: (n + 1) * 4]] = manipulator_fwdk(q[:, n - 1])
         jinv = np.linalg.pinv(jac[:, n * 4: (n + 1) * 4])
 
         # q(desired) = q(current) + Jinv * [[od-oc], [theta*axis]]
@@ -175,5 +175,5 @@ def arm_trajectory(od_body, cd_body, oc_body, cc_body, od_head, cd_head, oc_head
         distance[n] = np.linalg.norm(od_head-oi[:, n].reshape(3, 1))
     ax2[0].plot(time[:], distance[:])
     plt.show()
-    [trans_0to4, jac] = arm_fwdk(q[:, constant.TRAJECTORY_TIME_STEPS - 1])
+    [trans_0to4, jac] = manipulator_fwdk(q[:, constant.TRAJECTORY_TIME_STEPS - 1])
     return [trans_0to4, jac]

@@ -1,7 +1,7 @@
 
 import numpy as np
-from arm_invk import arm_invk
-from arm_fwdk import arm_fwdk
+from manipulator_invk import manipulator_invk
+from manipulator_fwdk import manipulator_fwdk
 import matplotlib.pyplot as plt
 import constant
 
@@ -29,7 +29,7 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
 
     # setup graphing parameters
     fig, axs = plt.subplots(2, 2)
-    time = [i for i in range(constant.PID_STEP_LIMIT)]
+    time = [(i / constant.DATA_FREQUENCY_HZ) for i in range(constant.PID_STEP_LIMIT)]
     error_graph = np.zeros((4, constant.PID_STEP_LIMIT))
 
     # initialize iteration counters (stability checking indexes)
@@ -41,7 +41,7 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
     q_current = np.array([[.8], [.35], [1.2], [.7]])
 
     # find target joint parameters
-    q_target = arm_invk(od_body, cd_body, od_head, cd_head)
+    q_target = manipulator_invk(od_body, cd_body, od_head, cd_head)
 
     print("Begin Manipulator Seeking Loop to:", q_target.T)
     # Loop until error is within the threshold
@@ -53,7 +53,7 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
             [oc_body, cc_body, oc_head, cc_head] = get_robot_data()
 
         # current joint variables
-        q_current = arm_invk(oc_body, cc_body, oc_head, cc_head)
+        q_current = manipulator_invk(oc_body, cc_body, oc_head, cc_head)
 
         # calculate adjustments based on PID
         [motor_values_adjust, prev_error, sum_error] = manipulator_pid(q_current, q_target, prev_error, sum_error)
@@ -95,17 +95,17 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
             # if plotting the seek operation is enabled: plot each joint error
             if constant.plotPID:
                 print("final joint error is:\n", prev_error)
-                axs[0, 0].set_title('Arm Displacement')
+                axs[0, 0].set_title('Arm Displacement (mm)')
                 axs[0, 0].plot(time[0:counter], error_graph[0, 0:counter])
-                axs[0, 1].set_title('Head Extension')
+                axs[0, 1].set_title('Head Extension (mm)')
                 axs[0, 1].plot(time[0:counter], error_graph[1, 0:counter])
-                axs[1, 0].set_title('Pan Angle')
+                axs[1, 0].set_title('Pan Angle (rad)')
                 axs[1, 0].plot(time[0:counter], error_graph[2, 0:counter])
-                axs[1, 1].set_title('Tilt Angle')
+                axs[1, 1].set_title('Tilt Angle (rad)')
                 axs[1, 1].plot(time[0:counter], error_graph[3, 0:counter])
                 plt.subplots_adjust(hspace=.32, wspace=.3)
                 plt.show()
-                [trans04, temp] = arm_fwdk([q_current[0, 0], q_current[1, 0], q_current[2, 0], q_current[3, 0]])
+                [trans04, temp] = manipulator_fwdk([q_current[0, 0], q_current[1, 0], q_current[2, 0], q_current[3, 0]])
                 xyz = trans04 @ np.array([[0], [0], [0], [1]])
                 print("difference in origin:\n", np.subtract(od_head.T, xyz[0:3].T))
                 print("difference in frame:\n", np.subtract(cd_head, trans04[0:3, 0:3]))
@@ -116,14 +116,14 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
         if counter >= constant.PID_STEP_LIMIT:
             print("MANIPULATOR SEEK ERROR: TOO MANY TIME STEPS")
             if constant.plotPID:
-                print("ERROR: TOO MANY TIME STEPS")
-                axs[0, 0].set_title('Arm Displacement')
+                print("final joint error is:\n", prev_error)
+                axs[0, 0].set_title('Arm Displacement (mm)')
                 axs[0, 0].plot(time[:], error_graph[0, :])
-                axs[0, 1].set_title('Head Extension')
+                axs[0, 1].set_title('Head Extension (mm)')
                 axs[0, 1].plot(time[:], error_graph[1, :])
-                axs[1, 0].set_title('Pan Angle')
+                axs[1, 0].set_title('Pan Angle (rad)')
                 axs[1, 0].plot(time[:], error_graph[2, :])
-                axs[1, 1].set_title('Tilt Angle')
+                axs[1, 1].set_title('Tilt Angle (rad)')
                 axs[1, 1].plot(time[:], error_graph[3, :])
                 plt.subplots_adjust(hspace=.32, wspace=.3)
                 plt.show()
@@ -145,7 +145,7 @@ def manipulator_seek(od_body, cd_body, od_head, cd_head):
 #  ###############################################################################################################
 def manipulator_pid(q_current, q_target, prev_error, sum_error):
 
-    # error of [arm_ext, scissor_ext, pan, tilt]
+    # error of [arm_ext, head_ext, pan, tilt]
     error = np.array([q_target[0] - q_current[0], q_target[1] - q_current[1],
                       q_target[2] - q_current[2], q_target[3] - q_current[3]]).T
 
@@ -227,7 +227,7 @@ def get_webots_data(motor_values, joint_vars):
     # ############################################### need to set this
     # print(joint_vars)
 
-    [trans, temp] = arm_fwdk(joint_vars)
+    [trans, temp] = manipulator_fwdk(joint_vars)
 
     xyz = trans @ np.array([[0], [0], [0], [1]])
 

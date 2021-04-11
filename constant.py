@@ -52,10 +52,6 @@ position_threshold = 2
 # Sets how many data points must be with the threshold to ensure the manipulator has stabilized
 consecutive_manipulator_successes = 60      # total time = # successes / frequency of data
 
-# planned trajectory variables for the manipulator (UNUSED)
-TRAJECTORY_TIME = 1.            # trajectory time in seconds
-TRAJECTORY_TIME_STEPS = 200     # number of time steps in the trajectory
-
 # maximum workspace x_dimension distance from center (mm)
 x_room_distance_from_center = 3000.
 # maximum workspace y_dimension distance from center (mm)
@@ -91,6 +87,10 @@ EXAMPLE_TEST_GRID = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+
+# planned trajectory variables for the manipulator (UNUSED)
+TRAJECTORY_TIME = 1.            # trajectory time in seconds
+TRAJECTORY_TIME_STEPS = 200     # number of time steps in the trajectory
 
 
 

@@ -177,3 +177,18 @@ def arm_trajectory(od_body, cd_body, oc_body, cc_body, od_head, cd_head, oc_head
     plt.show()
     [trans_0to4, jac] = manipulator_fwdk(q[:, constant.TRAJECTORY_TIME_STEPS - 1])
     return [trans_0to4, jac]
+
+
+# test sequence for the arm_trajectory
+def test_manipulator_trajectory():
+    print('test trajectory')
+    [trans04, temp] = manipulator_fwdk([1.42, .25, math.pi / 2, math.pi * 3 / 4])
+    xyz = trans04 @ np.array([[0], [0], [0], [1]])
+    zero = np.zeros((3, 1))
+    eye = np.eye(3)
+    # print('od:', xyz[0:3])
+    # print('cd:', trans04[0:3, 0:3])
+    [trans04_soln, temp] = arm_trajectory(zero, eye, zero, eye, xyz[0:3], trans04[0:3, 0:3], zero, eye)
+    xyz_soln = trans04_soln @ np.array([[0], [0], [0], [1]])
+    print('on - od:', xyz_soln[0:3] - xyz[0:3])
+    print('cn - cd:', trans04_soln[0:3, 0:3] - trans04[0:3, 0:3])
